@@ -1,5 +1,5 @@
 logs/*
-*.env*
+*.env
 .idea/
 __pycache__/
 api/*.db

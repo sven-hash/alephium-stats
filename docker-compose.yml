@@ -1,0 +1,27 @@
+version: "3.3"
+
+
+services:
+  api_ticker:
+    build: .
+    image: api_ticker:v4
+    labels:
+      - traefik.http.routers.api_ticker.entrypoints=websecure
+      - traefik.http.routers.api_ticker.rule=Host(`alephium.ono.re`)
+      - traefik.http.routers.api_ticker.tls=true
+      - traefik.http.routers.api_ticker.tls.certresolver=letsEncrypt
+      - traefik.enable=true
+    restart: unless-stopped
+    networks:
+      - traefik-proxy
+    ports:
+      - 5002:5002
+    env_file:
+      - '.env'
+    volumes:
+      - ./api/data.db:/api/data.db
+
+networks:
+   traefik-proxy:
+      external: true
+
