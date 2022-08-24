@@ -2,7 +2,9 @@
 
 The purpose of this repo is to share the code and give some explanation about data published by the endpoints
 
-[alph-top.web.app](https://alph-top.web.app/) use the API to list the top 256 wallets
+## Used in
+
+- [alph-top.web.app](https://alph-top.web.app/) use the API to list the top 256 wallets
 
 ## Actual endpoints
 
