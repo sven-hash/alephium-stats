@@ -18,7 +18,7 @@ The purpose of this repo is to share the code and give some explanation about da
    - Reacheable or not
    
 
-- [https://alephium.ono.re/api/stats/addresses](https://alephium.ono.re/api/stats/addresses)
+- [https://alephium.ono.re/api/stats/addresses](https://alephium.ono.re/api/stats/addresses?top=21)
   
   **Options**
   - `human`: not in set representation
