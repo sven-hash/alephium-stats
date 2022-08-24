@@ -2,6 +2,8 @@
 
 The purpose of this repo is to share the code and give some explanation about data published by the endpoints
 
+Initial developpement was from [@capito27](https://github.com/capito27)
+
 ## Used in
 
 - [alph-top.web.app](https://alph-top.web.app/) use the API to list the top 256 wallets
