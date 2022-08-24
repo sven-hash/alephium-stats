@@ -11,7 +11,7 @@ The purpose of this repo is to share the code and give some explanation about da
 - [https://alephium.ono.re/api/stats/peers](https://alephium.ono.re/api/stats/peers)
 
    Fullnodes that are seen by node-alephium.ono.re with information: 
-   - IP (not activated for privacy reasons)
+   - IP (not displayed for privacy reasons)
    - Physical location
    - First and last connection
    - Synched or not
