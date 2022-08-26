@@ -9,15 +9,6 @@ Initial developpement was from [@capito27](https://github.com/capito27)
 - [alph-top.web.app](https://alph-top.web.app/) list the top 256 wallets
 
 ## Actual endpoints
-
-- [https://alephium.ono.re/api/stats/peers](https://alephium.ono.re/api/stats/peers)
-
-   Fullnodes that are seen by node-alephium.ono.re with information: 
-   - IP (not displayed for privacy reasons)
-   - Physical location
-   - First and last connection
-   - Synched or not
-   - Reacheable or not
    
 
 - [https://alephium.ono.re/api/stats/addresses](https://alephium.ono.re/api/stats/addresses?top=21)
@@ -35,10 +26,26 @@ Initial developpement was from [@capito27](https://github.com/capito27)
    - `total_locked` total ALPH locked
    - `total_balance` total ALPH locked+unlocked
 
-- https://alephium.ono.re/api/stats/genesis
+- [https://alephium.ono.re/api/known-wallets/](https://alephium.ono.re/api/known-wallets/)
+   - list the [known wallets addresses](https://github.com/sven-hash/address2name)
+   
+
+- [https://alephium.ono.re/api/stats/peers](https://alephium.ono.re/api/stats/peers)
+
+   Fullnodes that are seen by node-alephium.ono.re with information: 
+   - IP (not displayed for privacy reasons)
+   - Physical location
+   - First and last connection
+   - Synched or not
+   - Reacheable or not
+
+- [https://alephium.ono.re/api/stats/genesis](https://alephium.ono.re/api/stats/genesis)
 
   This is the wallet list of genesis addresses with the amount at the time of the genesis block and the current balance and locked balance
 
+- [https://alephium.ono.re/api/ticker](https://alephium.ono.re/api/ticker)
+  
+  Price informations about ALPH ticker
 
 ## Run your own server
 
