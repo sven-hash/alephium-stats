@@ -158,8 +158,8 @@ class Name(Resource):
 
 def update():
     main_logger.info('Start DB update thread')
+    schedule.every().minutes.do(updateStats)
     while True:
-        schedule.every().minutes.do(updateStats)
         schedule.run_pending()
         time.sleep(60)
 
