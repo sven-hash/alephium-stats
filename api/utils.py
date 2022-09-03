@@ -21,8 +21,10 @@ class Utils:
 
             if response.ok:
                 data = response.json()
+                return {'country': data['country'], 'city': data['city'], 'region': data['region'], 'org': data['org']}
             else:
                 print(response.json())
+                return {}
 
             '''
             IP = data['ip']
@@ -30,7 +32,7 @@ class Utils:
             city = data['city']
             region = data['region']
             '''
-            return {'country': data['country'],'city': data['city'],'region': data['region'],'org':data['org']}
+
         except requests.RequestException as e:
             print(e)
             return {}
