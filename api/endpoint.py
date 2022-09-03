@@ -158,8 +158,8 @@ class Name(Resource):
 
 def update():
     main_logger.info('Start DB update thread')
+    schedule.every().minutes.do(updateStats)
     while True:
-        schedule.every().minutes.do(updateStats)
         schedule.run_pending()
         time.sleep(60)
 
@@ -176,4 +176,4 @@ api.add_resource(Name, '/api/known-wallets/')
 if __name__ == '__main__':
     host = '0.0.0.0'
 
-    app.run(debug=True, port='8080', host=host)
+    app.run(debug=False, port='8080', host=host)
