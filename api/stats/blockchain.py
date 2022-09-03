@@ -26,7 +26,7 @@ IPINFO_TOKEN = os.getenv('IPINFO_TOKEN')
 
 # Base path of an Alephium full node
 API_BASE = f"http://{os.getenv('FULLNODE_ENDPOINT')}:12973"
-API_MAINNET = "https://alephium-backend.ono.re"
+API_MAINNET = "https://mainnet-backend.alephium.org"
 
 # Speeds up the initial address dump phase
 SAVE_KNOWN_ADDRESSES = True
@@ -146,25 +146,29 @@ def get_peers():
                 ip = peer['address']['addr']
 
                 ipinfos = utils.Utils.getCountry(ip, s, IPINFO_TOKEN)
-                peer_version = next(
-                    (item['clientVersion'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']), None)
-                isSynced = next((item['isSynced'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']),
-                                False)
-                unreachable = True if ip in unreachablePeers else False
+                if ipinfos:
+                    peer_version = next(
+                        (item['clientVersion'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']), None)
+                    isSynced = next((item['isSynced'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']),
+                                    False)
+                    unreachable = True if ip in unreachablePeers else False
 
-                ipPeers.update({ip: [
-                    ipinfos,
-                    {'version': peer_version},
-                    {'isSynced': isSynced},
-                    {'unreachable': unreachable}
-                ]})
+                    ipPeers.update({ip: [
+                        ipinfos,
+                        {'version': peer_version},
+                        {'isSynced': isSynced},
+                        {'unreachable': unreachable}
+                    ]})
+
         else:
             return None
     except requests.RequestException as e:
         print(e)
         return None
 
-    db.insertManyPeer(ipPeers)
+    if ipPeers:
+        db.insertManyPeer(ipPeers)
+
 
 
 def get_genesis_initial_amount():
@@ -252,17 +256,19 @@ def get_all_balances():
     # use session to speedup requests
 
     s = requests.Session()
-    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=15))
+    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=120))
     addressBalances = list()
     main_logger.info(f'Start balances update. Number to update: {len(allAddresses)}')
     for v in allAddresses:
         address = v['address']
 
-        resp = s.get(f"{API_BASE}/addresses/{address}/balance").json()
+        #resp = s.get(f"{API_BASE}/addresses/{address}/balance").json()
+        resp = s.get(f"{API_MAINNET}/addresses/{address}/balance").json()
         balance = float(resp['balance'])
         locked = float(resp['lockedBalance'])
 
         addressBalances.append({'address': address, 'balance': balance, 'locked': locked, "updated_on": datetime.now()})
+        time.sleep(2/1000)
 
     db.updateBalance(addressBalances)
     main_logger.info('Balances update done')
