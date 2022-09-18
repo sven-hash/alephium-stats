@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 
@@ -13,25 +15,43 @@ class Utils:
         return '{:.{}f} {}'.format(num, round_to, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
 
     @staticmethod
-    def getCountry(ip,s,token):
+    def queryIPinfos(ip,s,token=None):
+
+        if token is not None:
+            url = f'https://ipinfo.io/{ip}?token={token}'
+        else:
+            url = f'https://ipapi.co/{ip}/json/'
+
+        response = s.get(url)
+
+        return response
+
+
+    @staticmethod
+    def getCountry(ip,s,token=None):
 
         try:
-            url = f'https://ipinfo.io/{ip}?token={token}'
-            response = s.get(url)
+
+            sleepTime = 3
+            retries = 1
+            response = Utils.queryIPinfos(ip,s, token)
+
+            while not response.ok:
+                if retries >= 5:
+                    break
+                time.sleep(sleepTime)
+                sleepTime += 1
+                retries += 1
+
+                response = Utils.queryIPinfos(ip,s, token)
+                print(f"Throttle sleep {sleepTime}s retries {retries} response {response.json()}")
 
             if response.ok:
                 data = response.json()
                 return {'country': data['country'], 'city': data['city'], 'region': data['region'], 'org': data['org']}
             else:
-                print(response.json())
+                print(f"Data not inserted error {response.json()}")
                 return {}
-
-            '''
-            IP = data['ip']
-            org = data['org']
-            city = data['city']
-            region = data['region']
-            '''
 
         except requests.RequestException as e:
             print(e)
