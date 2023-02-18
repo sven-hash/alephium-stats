@@ -4,9 +4,12 @@ import codecs
 import csv
 import json
 import logging
+import math
 import os
 import sys
+import threading
 import time
+import traceback
 from datetime import datetime, timedelta
 from os.path import join
 import csv
@@ -17,16 +20,19 @@ from dotenv import load_dotenv
 
 import utils
 from stats.db import BaseModel
+from tqdm import tqdm
+import aiostream
 
 ###### CONFIG
 
 load_dotenv(dotenv_path=join(".env"))
 
 IPINFO_TOKEN = os.getenv('IPINFO_TOKEN')
-
+FULLNODE_ENDPOINT = os.getenv('FULLNODE_ENDPOINT', "node-alephium.ono.re")
 # Base path of an Alephium full node
-API_BASE = f"http://{os.getenv('FULLNODE_ENDPOINT')}:12973"
-API_MAINNET = "https://mainnet-backend.alephium.org"
+API_BASE = f"http://{FULLNODE_ENDPOINT}"
+API_MAINNET = "https://backend.mainnet.alephium.org"
+# API_MAINNET = "https://alephium-backend.ono.re"
 
 # Speeds up the initial address dump phase
 SAVE_KNOWN_ADDRESSES = True
@@ -104,12 +110,13 @@ def get_txs(s, addr, depth=0):
         print(e)
         return None
 
+
 def get_known_addresses():
     CSV_URL = "https://raw.githubusercontent.com/sven-hash/address2name/main/known-wallets.txt"
     VERIFIED_STRING = "verified"
 
     s = requests.Session()
-    data = s.get(CSV_URL,stream=True)
+    data = s.get(CSV_URL, stream=True)
     reader = csv.reader(codecs.iterdecode(data.iter_lines(), 'utf-8'), delimiter=';')
 
     for row in reader:
@@ -128,8 +135,7 @@ def get_known_addresses():
         if len(row) >= 5:
             type = row[4]
 
-        db.insertName(address,name,exchangeName,state,type)
-
+        db.insertName(address, name, exchangeName, state, type)
 
 
 def get_peers():
@@ -148,9 +154,11 @@ def get_peers():
                 ipinfos = utils.Utils.getCountry(ip, s, IPINFO_TOKEN)
                 if ipinfos:
                     peer_version = next(
-                        (item['clientVersion'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']), None)
-                    isSynced = next((item['isSynced'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']),
-                                    False)
+                        (item['clientVersion'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']),
+                        None)
+                    isSynced = next(
+                        (item['isSynced'] for item in peer_clique_info if item["cliqueId"] == peer['cliqueId']),
+                        False)
                     unreachable = True if ip in unreachablePeers else False
 
                     ipPeers.update({ip: [
@@ -168,7 +176,6 @@ def get_peers():
 
     if ipPeers:
         db.insertManyPeer(ipPeers)
-
 
 
 def get_genesis_initial_amount():
@@ -207,8 +214,7 @@ def get_circulating_supply():
 
 
 def dump_address_from_TS_range(start, end, s):
-    response = s.get(f"{API_BASE}/blockflow?fromTs={start * 1000}&toTs={end * 1000}")
-
+    response = s.get(f"{API_BASE}/blockflow/blocks?fromTs={start * 1000}&toTs={end * 1000}")
     for inner_blocks in response.json()['blocks']:
         for block in inner_blocks:
             for tx in block['transactions']:
@@ -226,8 +232,9 @@ def scrape_all_addresses():
     s = requests.Session()
     # manually dump the genesis addresses
     dump_address_from_TS_range(GENESIS_TS, GENESIS_TS + 5, s)
-    for ts_start in range(FIRST_BLOCK_TS, int(time.time()), 60 * 30):  # only supports ranges of 30 minutes or less
-        dump_address_from_TS_range(ts_start, ts_start + 60 * 30, s)
+    for ts_start in range(FIRST_BLOCK_TS, int(time.time()), 60 * 60):  # only supports ranges of 30 minutes or less
+        print(ts_start, ts_start + 60 * 60)
+        dump_address_from_TS_range(ts_start, ts_start + 60 * 60, s)
 
 
 def scrape_new_addresses(start_point):
@@ -252,23 +259,299 @@ def get_addresses():
         addressToBalance.pop(address, None)
 
 
-def get_all_balances():
+def get_recv_tx():
+    pass
+
+
+def get_send_tx():
+    pass
+
+
+def find_historical_tx(txs, address):
+    tx_send = None
+    tx_recv = None
+
+    for tx in txs:
+
+        if len(tx.get('inputs')) <= 0:
+            if tx_recv is None:
+                tx_recv = tx['timestamp'] / 1000
+
+        for input in tx.get('inputs'):
+
+            if input['address'] == address and tx_send is None:
+                tx_send = tx['timestamp'] / 1000
+
+            if input['address'] != address and tx_recv is None:
+                tx_recv = tx['timestamp'] / 1000
+
+    return tx_send, tx_recv
+
+
+'''
+for layer in range(1, utils.NUM_LAYER + 1):
+            ips = [f"http://{ip['ip']}:{ip['http_api_port']}/{utils.ENDPOINT_PACKETS_MIXED}" for ip in
+                   self.db.getActiveSet(layer=layer)]
+
+            async with aiohttp.ClientSession(raise_for_status=True) as session:
+                urls = [asyncio.ensure_future(utils.fetch(session, url, timeout=5)) for url in ips]
+                data = await asyncio.gather(*urls, return_exceptions=True)
+'''
+
+
+def get_number_page(s, address, limit):
+    try:
+        num_tx = s.get(f"{API_MAINNET}/addresses/{address}/total-transactions").json()
+    except requests.RequestException as e:
+        traceback.print_exc()
+        return 0
+
+    return math.ceil(num_tx / limit)
+
+
+async def fetch(session, url, timeout=30, reverse=False):
+    async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
+        try:
+            data = await resp.json()
+            time.sleep(2 / 1000)
+
+            if resp.ok:
+
+                if reverse:
+                    data.reverse()
+
+                addr = url.split('/')[4]
+                return {addr: find_historical_tx(data, addr)}
+
+            else:
+                return None
+        except (requests.RequestException, asyncio.TimeoutError) as e:
+            pass
+
+
+# from https://stackoverflow.com/questions/62294385/synchronous-generator-in-asyncio
+def async_wrap_iter(it):
+    """Wrap blocking iterator into an asynchronous one"""
+    loop = asyncio.get_event_loop()
+    q = asyncio.Queue(1)
+    exception = None
+    _END = object()
+
+    async def yield_queue_items():
+        while True:
+            next_item = await q.get()
+            if next_item is _END:
+                break
+            yield next_item
+        if exception is not None:
+            # the iterator has raised, propagate the exception
+            raise exception
+
+    def iter_to_queue():
+        nonlocal exception
+        try:
+            for item in it:
+                # This runs outside the event loop thread, so we
+                # must use thread-safe API to talk to the queue.
+                asyncio.run_coroutine_threadsafe(q.put(item), loop).result()
+        except Exception as e:
+            exception = e
+        finally:
+            asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()
+
+    threading.Thread(target=iter_to_queue).start()
+    return yield_queue_items()
+
+
+async def worker(queue, session, results, timeout=30, reverse=False):
+    while True:
+        url = await queue.get()
+        results.append(await fetch(session, url, timeout=timeout, reverse=reverse))
+        # Mark the item as processed, allowing queue.join() to keep
+        # track of remaining work and know when everything is done.
+        queue.task_done()
+
+
+async def get_last_txs(addressesList, urls=None, reverse=False):
+    addrTxUrl = list()
+    for addr in addressesList:
+        address = addr['address']
+        if urls is None:
+            addrTxUrl.append(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=100")
+        else:
+            addrTxUrl = urls
+    main_logger.info("Get txs")
+
+    WORKER = 100
+    queue = asyncio.Queue(WORKER)
+    results = []
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
+        workers = [asyncio.create_task(worker(queue, session, results, timeout=30, reverse=reverse)) for _ in
+                   range(WORKER)]
+
+        async for batch in async_wrap_iter(addrTxUrl):
+            await queue.put(batch)
+
+        # Wait for all enqueued items to be processed.
+        await queue.join()
+        # The workers are now idly waiting for the next queue item and we
+        # no longer need them.
+    for runningWorker in workers:
+        runningWorker.cancel()
+
+    return results
+
+
+async def get_tx_history():
+    s = requests.Session()
+    allAddresses = db.getTxAddressToUpdate(datetime.utcnow() - timedelta(minutes=120))
+
+    if len(allAddresses) <= 0:
+        allAddresses = db.getAllAddresses()
+
+    main_logger.info(f'Start txs update. Number to update: {len(allAddresses)}')
+    count = 0
+
+    allTxs = await get_last_txs(addressesList=allAddresses)
+    addressesTxs = list()
+
+    for addresses in allTxs:
+        if type(addresses) == dict:
+            for address, tx in addresses.items():
+                addressesTxs.append(
+                    {'address': address, 'first_tx_send': None, 'first_tx_recv': None, 'last_tx_send': tx[0],
+                     'last_tx_recv': tx[1]})
+        else:
+            count += 1
+    main_logger.info(f"tx error: {count}")
+    db.insertTxHistory(addressesTxs)
+
+    urls = list()
+    addressesTxs = list()
+    for addr in tqdm(allAddresses):
+        address = addr['address']
+        page = get_number_page(s, address, 100)
+        urls.append(f"{API_MAINNET}/addresses/{address}/transactions?page={page}&limit=100")
+
+    allTxs = await get_last_txs(addressesList=allAddresses, urls=urls, reverse=True)
+
+    for addresses in allTxs:
+        if type(addresses) == dict:
+            for address, tx in addresses.items():
+                addressesTxs.append(
+                    {'address': address, 'first_tx_send': tx[0],
+                     'first_tx_recv': tx[1], 'last_tx_send': None,
+                     'last_tx_recv': None})
+        else:
+            count += 1
+    main_logger.info(f"tx error: {count}")
+
+    db.insertTxHistory(addressesTxs)
+
+    ''''
+    for addr in tqdm(allAddresses):
+        addressesTxs = list()
+        address = addr['address']
+
+        try:
+            # reverse_tx = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=1&reverse=true").json()[0]
+            num_tx = get_number_page(s, address, 100)
+
+            if num_tx > 0:
+                txs = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=100").json()
+                last_tx_send, last_tx_recv = find_historical_tx(txs, address)
+
+                # go to the last page
+                txs = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page={num_tx}&limit=100").json()
+                txs.reverse()
+                first_tx_send, first_tx_recv = find_historical_tx(txs, address)
+                addressesTxs.append(
+                    {'address': address, 'first_tx_send': first_tx_send, 'last_tx_send': last_tx_send,
+                     'first_tx_recv': first_tx_recv,
+                     'last_tx_recv': last_tx_recv})
+                db.insertTxHistory(addressesTxs)
+                time.sleep(2 / 1000)
+
+
+        except requests.RequestException as e:
+            traceback.print_exc()
+        '''
+
+
+async def getBalances(urls):
+    main_logger.info("Get balances")
+
+    WORKER = 100
+    queue = asyncio.Queue(WORKER)
+    results = []
+
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
+        workers = [asyncio.create_task(workerBalance(queue, session, results, timeout=30)) for _ in
+                   range(WORKER)]
+
+        async for url in async_wrap_iter(urls):
+            await queue.put(url)
+
+        # Wait for all enqueued items to be processed.
+        await queue.join()
+        # The workers are now idly waiting for the next queue item and we
+        # no longer need them.
+    for runningWorker in workers:
+        runningWorker.cancel()
+
+    return results
+
+
+async def fetchBalance(session, url, timeout=30):
+    async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
+        try:
+            data = await resp.json()
+            time.sleep(2 / 1000)
+
+            addr = url.split('/')[4]
+            return {addr: data}
+
+        except (requests.RequestException, asyncio.TimeoutError) as e:
+            pass
+
+
+async def workerBalance(queue, session, results, timeout=30):
+    while True:
+        url = await queue.get()
+        results.append(await fetchBalance(session, url, timeout=timeout))
+        # Mark the item as processed, allowing queue.join() to keep
+        # track of remaining work and know when everything is done.
+        queue.task_done()
+
+
+async def get_all_balances():
     # use session to speedup requests
 
-    s = requests.Session()
-    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=120))
+    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=30))
     addressBalances = list()
     main_logger.info(f'Start balances update. Number to update: {len(allAddresses)}')
+
+    urls = []
     for v in allAddresses:
         address = v['address']
 
-        #resp = s.get(f"{API_BASE}/addresses/{address}/balance").json()
-        resp = s.get(f"{API_MAINNET}/addresses/{address}/balance").json()
-        balance = float(resp['balance'])
-        locked = float(resp['lockedBalance'])
+        urls.append(f"{API_MAINNET}/addresses/{address}/balance")
 
-        addressBalances.append({'address': address, 'balance': balance, 'locked': locked, "updated_on": datetime.now()})
-        time.sleep(2/1000)
+    allBalances = await getBalances(urls)
+    count = 0
+
+    for data in allBalances:
+        if type(data) == dict:
+            for address, balanceData in data.items():
+                balance = float(balanceData['balance'])
+                locked = float(balanceData['lockedBalance'])
+
+                addressBalances.append(
+                    {'address': address, 'balance': balance, 'locked': locked, "updated_on": datetime.now()})
+                time.sleep(2 / 1000)
+        else:
+            count += 1
+    main_logger.info(f"balance error: {count}")
 
     db.updateBalance(addressBalances)
     main_logger.info('Balances update done')
@@ -286,11 +569,12 @@ def print_top_whales(count=100):
 def updateStats():
     main_logger.info('Start DB update process')
     try:
-        get_peers()
+        # get_peers()
         get_addresses()
         db.insertManyAddress(addressToBalance.keys())
         get_known_addresses()
-        get_all_balances()
+        asyncio.run(get_all_balances())
+        asyncio.run(get_tx_history())
     except Exception as e:
         main_logger.exception(e)
 

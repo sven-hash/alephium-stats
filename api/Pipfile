@@ -16,8 +16,10 @@ backoff = "*"
 peewee = "*"
 schedule = "*"
 cachetools = "*"
+grequests = "*"
+aiostream = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3"
+python_version = "3.11.1"

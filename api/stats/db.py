@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from peewee import *
+from playhouse.flask_utils import PaginatedQuery
 
 database = SqliteDatabase('./data.db', pragmas={'foreign_keys': 1})
 
@@ -82,6 +83,39 @@ class BaseModel(Model):
         finally:
             self.close()
 
+    def insertTxHistory(self, txsHistory):
+        try:
+            with database.atomic():
+                for data in txsHistory:
+
+                    addrId = Address.get(Address.address == data['address'])
+
+                    cleanData = {}
+                    for k,v in data.items():
+                        if v is not None:
+                            cleanData[k]= v
+
+
+                    txAddrId, created = TxHistory.get_or_create(addressFK=addrId,
+                                                              defaults=cleanData)
+                    if not(created):
+                        del cleanData['address']
+                        cleanData['updated_on'] = datetime.utcnow()
+                        TxHistory.update(**cleanData) \
+                            .where(TxHistory.id == txAddrId).execute()
+                        '''
+                        if TxHistory.get_by_id(txAddrId).first_tx_recv is None or TxHistory.get_by_id(
+                                txAddrId).first_tx_send is None:
+                            TxHistory.update(**cleanData) \
+                                .where(TxHistory.addressFK == txAddrId).execute()
+                        else:
+                            print('dfdf')
+                            TxHistory.update(**cleanData) \
+                                .where(TxHistory.addressFK == txAddrId).execute()
+                        '''
+        finally:
+            self.close()
+
     def insertManyPeer(self, peers):
         rows = list()
 
@@ -129,6 +163,51 @@ class BaseModel(Model):
         finally:
             self.close()
 
+    def getTxAddressWithFirst(self):
+        self.connect()
+
+        data = list(TxHistory.select().where((TxHistory.first_tx_recv) & (TxHistory.first_tx_send)). \
+                    join(Address).dicts())
+
+        self.close()
+        return data
+
+    def getTxAddressWithoutFirst(self):
+        self.connect()
+
+        data = list(TxHistory.select().where((TxHistory.first_tx_recv.is_null()) | (TxHistory.first_tx_send.is_null())). \
+                    join(Address).dicts())
+
+        self.close()
+        return data
+
+    def getTxAddress(self,address):
+        self.connect()
+
+        if address is not None:
+
+            addrId = Address.get(Address.address == address)
+            data = list(TxHistory.select(Address.address, TxHistory.first_tx_recv,
+                                         TxHistory.first_tx_send, TxHistory.last_tx_recv, TxHistory.last_tx_send,
+                                         TxHistory.created_on, TxHistory.updated_on).where(TxHistory.addressFK == addrId).
+                        join(Address).dicts())
+
+        else:
+            data = list(TxHistory.select(Address.address, TxHistory.first_tx_recv,
+                                         TxHistory.first_tx_send, TxHistory.last_tx_recv, TxHistory.last_tx_send,
+                                         TxHistory.created_on, TxHistory.updated_on). \
+                        join(Address).dicts())
+
+        self.close()
+        return data
+
+    def getTxAddressToUpdate(self,date):
+        self.connect()
+        data = list(TxHistory.select(Address.address).where(
+            TxHistory.updated_on <= date).join(Address).dicts())
+        self.close()
+        return data
+
     def getPeers(self):
         self.connect()
 
@@ -157,20 +236,30 @@ class BaseModel(Model):
         self.close()
         return data
 
-    def getOrderedBalanceAddresses(self, limit=0):
+    def getOrderedBalanceAddresses(self, limit, page, size):
         self.connect()
         if limit > 0:
             data = [address for address in Address.select(Address.address, Address.updated_on, Address.balance,
                                                           Address.locked, Name.name, Name.state, Name.exchangeName,
-                                                          Name.type).join(Name, join_type=JOIN.LEFT_OUTER).limit(limit)
-                .order_by(Address.balance.desc()).dicts()]
+                                                          Name.type,Address.id).join(Name, join_type=JOIN.LEFT_OUTER).limit(limit)
+            .order_by(Address.balance.desc()).dicts()]
+
+        elif page is not None:
+
+            data = list(Address.select(Address.address, Address.updated_on, Address.balance,
+                                 Address.locked, Name.name, Name.state, Name.exchangeName,
+                                 Name.type).join(Name, join_type=JOIN.LEFT_OUTER).order_by(Address.balance.desc()).\
+                paginate(page, size).dicts())
+
         else:
             data = [address for address in Address.select(Address.address, Address.updated_on, Address.balance,
                                                           Address.locked, Name.name, Name.state, Name.exchangeName,
                                                           Name.type)
-                .join(Name, join_type=JOIN.LEFT_OUTER).
-                order_by(Address.balance.desc()).dicts()]
+            .join(Name, join_type=JOIN.LEFT_OUTER).
+            order_by(Address.balance.desc()).dicts()]
+
         self.close()
+
         return data
 
     def getAddressByDate(self, date):
@@ -310,6 +399,21 @@ class Genesis(BaseModel):
     updated_on = DateTimeField(default=datetime.now)
 
 
+class TxHistory(BaseModel):
+    class Meta:
+        database = database
+        db_table = 'tx_history'
+
+    addressFK = ForeignKeyField(Address, backref='tx_history', unique=True)
+    first_tx_recv = TimestampField(default=None, null=True)
+    first_tx_send = TimestampField(default=None, null=True)
+    last_tx_recv = TimestampField(default=None, null=True)
+    last_tx_send = TimestampField(default=None, null=True)
+
+    created_on = DateTimeField(default=datetime.utcnow)
+    updated_on = DateTimeField(default=datetime.utcnow)
+
+
 class Peer(BaseModel):
     class Meta:
         database = database
@@ -330,4 +434,4 @@ class Peer(BaseModel):
 
 def create_tables():
     with database:
-        database.create_tables([Address, Genesis, Peer, Name])
+        database.create_tables([Address, Genesis, Peer, Name, TxHistory])

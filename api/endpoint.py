@@ -59,15 +59,23 @@ class TickerPrice(Resource):
 class AddressesStats(Resource):
     def get(self):
         topAddresses = request.args.get('top', type=int, default=0)
+        page = request.args.get('page', type=int, default=None)
+        size = request.args.get('size', type=int, default=10)
         humanFormat = True if request.args.get('human') is not None else False
 
-        data = self.read_data(topAddresses, humanFormat)
+        if page is not None:
+            data = self.read_data(topAddresses, humanFormat, page, size)
+        elif topAddresses > 0:
+            data = self.read_data(topAddresses, humanFormat)
+        else:
+            data = self.read_data(topAddresses, humanFormat)
+
         response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     @cached(cache={})
-    def read_data(self, topAddresses, hint):
+    def read_data(self, topAddresses, hint, page=None, size=None):
         data = {}
         human = {}
         db = BaseModel()
@@ -88,7 +96,7 @@ class AddressesStats(Resource):
             })
             data.update({"hint": human})
 
-        allAddresses = db.getOrderedBalanceAddresses(topAddresses)
+        allAddresses = db.getOrderedBalanceAddresses(topAddresses, page, size)
 
         for addr in allAddresses:
             addr.update({'balanceHint': f"{Utils.humanFormat(addr['balance'] / (10 ** 18))} ALPH"})
@@ -126,6 +134,20 @@ class GenesisStats(Resource):
             addr.update({'lockedHint': f"{Utils.humanFormat(addr['locked'] / (10 ** 18))} ALPH"})
 
         return data
+
+
+class TxHistoryStats(Resource):
+    def get(self,address=None):
+        data = self.read_data(address)
+        response = jsonify(data)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
+
+    @cached(cache={})
+    def read_data(self,address=None):
+        db = BaseModel()
+
+        return db.getTxAddress(address)
 
 
 class PeersStats(Resource):
@@ -170,8 +192,9 @@ th.start()
 api.add_resource(TickerPrice, '/api/ticker')
 api.add_resource(AddressesStats, '/api/stats/addresses')
 api.add_resource(GenesisStats, '/api/stats/genesis')
-api.add_resource(PeersStats, '/api/stats/peers')
+# api.add_resource(PeersStats, '/api/stats/peers')
 api.add_resource(Name, '/api/known-wallets/')
+api.add_resource(TxHistoryStats, '/api/stats/tx-history','/api/stats/tx-history/<string:address>')
 
 if __name__ == '__main__':
     host = '0.0.0.0'

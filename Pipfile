@@ -15,7 +15,8 @@ aiohttp = "*"
 tqdm = "*"
 matplotlib = "*"
 cachetools = "*"
-
+flask-peewee = "*"
+gunicorn = "*"
 
 [dev-packages]
 

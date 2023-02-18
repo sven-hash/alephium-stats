@@ -1,4 +1,5 @@
 from stats.blockchain import *
+from stats.db import *
 
 if __name__ == '__main__':
     log_file_format = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
@@ -9,8 +10,13 @@ if __name__ == '__main__':
     console_handler.setFormatter(logging.Formatter(log_file_format))
     main_logger.addHandler(console_handler)
 
+    create_tables()
     db = BaseModel()
-    get_known_addresses()
+    #db.getTxAddressWithFirst()
+    #db.getTxAddressWithFirst()
+    #asyncio.run(get_tx_history())
+    asyncio.run(get_all_balances())
+
     """
     get_addresses()
 
