@@ -4,7 +4,6 @@ version: "3.3"
 services:
   api_ticker:
     build: .
-    image: api_ticker:v4
     labels:
       - traefik.http.routers.api_ticker.entrypoints=websecure
       - traefik.http.routers.api_ticker.rule=Host(`alephium.ono.re`)
