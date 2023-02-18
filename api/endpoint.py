@@ -14,7 +14,7 @@ from cmc.alph import CmcAPI
 from coingecko.alph import CoingeckoAPI
 from gateio.alph import GateIoAPI
 from stats.blockchain import updateStats
-from stats.db import BaseModel
+from stats.db import BaseModel, create_tables
 from utils import Utils
 
 app = Flask(__name__)
@@ -179,6 +179,7 @@ class Name(Resource):
 
 
 def update():
+    create_tables()
     main_logger.info('Start DB update thread')
     schedule.every().minutes.do(updateStats)
     while True:
