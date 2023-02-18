@@ -16,6 +16,8 @@ Initial developpement was from [@capito27](https://github.com/capito27)
   **Options**
   - `human`: not in set representation
   - `top`: limit the number of wallet to show
+  - `page`: page number
+  - `size`: number of elements in the page
     
   Lists the wallets where an amount of ALPH had been received or withdrawed. Sorted by the largest to smallest wallet
    - total balance
@@ -26,19 +28,19 @@ Initial developpement was from [@capito27](https://github.com/capito27)
    - `total_locked` total ALPH locked
    - `total_balance` total ALPH locked+unlocked
 
+- [https://alephium.ono.re/api/stats/tx-history](https://alephium.ono.re/api/stats/tx-history)
+   - list the first and last transactions for all of the active 1addresses
+    
+   It's possible to get tx history for one address: [https://alephium.ono.re/api/stats/tx-history/<address>](https://alephium.ono.re/api/stats/tx-history/<address>)
+
+   **Options**
+   - `page`: page number                   - `
+   - `size`: number of elements in the page
+
+
 - [https://alephium.ono.re/api/known-wallets/](https://alephium.ono.re/api/known-wallets/)
    - list the [known wallets addresses](https://github.com/sven-hash/address2name)
    
-
-- [https://alephium.ono.re/api/stats/peers](https://alephium.ono.re/api/stats/peers)
-
-   Fullnodes that are seen by node-alephium.ono.re with information: 
-   - IP (not displayed for privacy reasons)
-   - Physical location
-   - First and last connection
-   - Synched or not
-   - Reacheable or not
-
 - [https://alephium.ono.re/api/stats/genesis](https://alephium.ono.re/api/stats/genesis)
 
   This is the wallet list of genesis addresses with the amount at the time of the genesis block and the current balance and locked balance

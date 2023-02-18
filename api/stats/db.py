@@ -181,7 +181,7 @@ class BaseModel(Model):
         self.close()
         return data
 
-    def getTxAddress(self,address):
+    def getTxAddress(self,page,size=10,address=None):
         self.connect()
 
         if address is not None:
@@ -192,6 +192,11 @@ class BaseModel(Model):
                                          TxHistory.created_on, TxHistory.updated_on).where(TxHistory.addressFK == addrId).
                         join(Address).dicts())
 
+        elif page is not None:
+            data = list(TxHistory.select(Address.address, TxHistory.first_tx_recv,
+                                         TxHistory.first_tx_send, TxHistory.last_tx_recv, TxHistory.last_tx_send,
+                                         TxHistory.created_on, TxHistory.updated_on). \
+                        join(Address).paginate(page, size).dicts())
         else:
             data = list(TxHistory.select(Address.address, TxHistory.first_tx_recv,
                                          TxHistory.first_tx_send, TxHistory.last_tx_recv, TxHistory.last_tx_send,

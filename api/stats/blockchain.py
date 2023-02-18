@@ -380,7 +380,6 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
             addrTxUrl.append(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=100")
         else:
             addrTxUrl = urls
-    main_logger.info("Get txs")
 
     WORKER = 100
     queue = asyncio.Queue(WORKER)
@@ -412,6 +411,7 @@ async def get_tx_history():
     main_logger.info(f'Start txs update. Number to update: {len(allAddresses)}')
     count = 0
 
+    main_logger.info("Get last txs")
     allTxs = await get_last_txs(addressesList=allAddresses)
     addressesTxs = list()
 
@@ -428,11 +428,14 @@ async def get_tx_history():
 
     urls = list()
     addressesTxs = list()
-    for addr in tqdm(allAddresses):
+
+    main_logger.info("Get last page")
+    for addr in allAddresses:
         address = addr['address']
         page = get_number_page(s, address, 100)
         urls.append(f"{API_MAINNET}/addresses/{address}/transactions?page={page}&limit=100")
 
+    main_logger.info("Get first txs")
     allTxs = await get_last_txs(addressesList=allAddresses, urls=urls, reverse=True)
 
     for addresses in allTxs:

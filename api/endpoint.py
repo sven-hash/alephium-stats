@@ -138,16 +138,18 @@ class GenesisStats(Resource):
 
 class TxHistoryStats(Resource):
     def get(self,address=None):
-        data = self.read_data(address)
+        page = request.args.get('page', type=int, default=None)
+        size = request.args.get('size', type=int, default=10)
+        data = self.read_data(page, size, address)
         response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     @cached(cache={})
-    def read_data(self,address=None):
+    def read_data(self,page, size, address=None):
         db = BaseModel()
 
-        return db.getTxAddress(address)
+        return db.getTxAddress(page, size, address)
 
 
 class PeersStats(Resource):
