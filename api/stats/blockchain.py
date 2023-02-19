@@ -313,7 +313,7 @@ async def fetch(session, url, timeout=30, reverse=False):
     async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
         try:
             data = await resp.json()
-            time.sleep(2 / 1000)
+            #time.sleep(2 / 1000)
 
             if resp.ok:
 
@@ -577,7 +577,7 @@ def updateStats():
         db.insertManyAddress(addressToBalance.keys())
         get_known_addresses()
         asyncio.run(get_all_balances())
-        asyncio.run(get_tx_history())
+        #asyncio.run(get_tx_history())
     except Exception as e:
         main_logger.exception(e)
 
