@@ -100,19 +100,9 @@ class BaseModel(Model):
                                                               defaults=cleanData)
                     if not(created):
                         del cleanData['address']
-                        cleanData['updated_on'] = datetime.utcnow()
                         TxHistory.update(**cleanData) \
                             .where(TxHistory.id == txAddrId).execute()
-                        '''
-                        if TxHistory.get_by_id(txAddrId).first_tx_recv is None or TxHistory.get_by_id(
-                                txAddrId).first_tx_send is None:
-                            TxHistory.update(**cleanData) \
-                                .where(TxHistory.addressFK == txAddrId).execute()
-                        else:
-                            print('dfdf')
-                            TxHistory.update(**cleanData) \
-                                .where(TxHistory.addressFK == txAddrId).execute()
-                        '''
+
         finally:
             self.close()
 
@@ -175,7 +165,7 @@ class BaseModel(Model):
     def getTxAddressWithoutFirst(self):
         self.connect()
 
-        data = list(TxHistory.select().where((TxHistory.first_tx_recv.is_null()) | (TxHistory.first_tx_send.is_null())). \
+        data = list(TxHistory.select(Address.address,TxHistory).where((TxHistory.first_tx_recv.is_null()) | (TxHistory.first_tx_send.is_null())). \
                     join(Address).dicts())
 
         self.close()

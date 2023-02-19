@@ -14,8 +14,8 @@ if __name__ == '__main__':
     db = BaseModel()
     #db.getTxAddressWithFirst()
     #db.getTxAddressWithFirst()
-    #asyncio.run(get_tx_history())
-    asyncio.run(get_all_balances())
+    asyncio.run(get_tx_history())
+    #asyncio.run(get_all_balances())
 
     """
     get_addresses()
