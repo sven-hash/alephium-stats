@@ -340,7 +340,7 @@ async def fetch(session, url, timeout=30, reverse=False):
             else:
                 return None
         except (requests.RequestException, asyncio.TimeoutError) as e:
-            pass
+            return None
 
 
 
@@ -498,7 +498,7 @@ async def fetchBalance(session, url, timeout=30):
             return {addr: data}
 
         except (requests.RequestException, asyncio.TimeoutError) as e:
-            pass
+            return None
 
 
 async def workerBalance(queue, session, results, timeout=30):
