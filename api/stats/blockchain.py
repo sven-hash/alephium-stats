@@ -577,7 +577,7 @@ def updateStats():
         db.insertManyAddress(addressToBalance.keys())
         get_known_addresses()
         asyncio.run(get_all_balances())
-        #asyncio.run(get_tx_history())
+        asyncio.run(get_tx_history())
     except Exception as e:
         main_logger.exception(e)
 
