@@ -16,6 +16,7 @@ import csv
 import aiohttp
 import backoff
 import requests
+from aiohttp import ClientTimeout
 from dotenv import load_dotenv
 
 import utils
@@ -313,6 +314,7 @@ def find_historical_tx(txs, address):
 
     return tx_send, tx_recv
 
+
 def get_number_page(s, address, limit):
     try:
         num_tx = s.get(f"{API_MAINNET}/addresses/{address}/total-transactions").json()
@@ -327,7 +329,7 @@ async def fetch(session, url, timeout=30, reverse=False):
     async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
         try:
             data = await resp.json()
-            #time.sleep(2 / 1000)
+            # time.sleep(2 / 1000)
 
             if resp.ok:
 
@@ -341,8 +343,6 @@ async def fetch(session, url, timeout=30, reverse=False):
                 return None
         except (requests.RequestException, asyncio.TimeoutError) as e:
             return None
-
-
 
 
 async def worker(queue, session, results, timeout=30, reverse=False):
@@ -363,7 +363,7 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
         else:
             addrTxUrl = urls
 
-    WORKER = 100
+    WORKER = 300
     queue = asyncio.Queue(WORKER)
     results = []
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
@@ -428,93 +428,78 @@ async def get_tx_history():
                 addressesTxs.append(
                     {'address': address, 'first_tx_send': tx[0],
                      'first_tx_recv': tx[1], 'last_tx_send': None,
-                     'last_tx_recv': None,'updated_on': datetime.utcnow()})
+                     'last_tx_recv': None, 'updated_on': datetime.utcnow()})
         else:
             count += 1
     main_logger.info(f"tx error: {count}")
 
     db.insertTxHistory(addressesTxs)
 
-    ''''
-    for addr in tqdm(allAddresses):
-        addressesTxs = list()
-        address = addr['address']
-
-        try:
-            # reverse_tx = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=1&reverse=true").json()[0]
-            num_tx = get_number_page(s, address, 100)
-
-            if num_tx > 0:
-                txs = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page=1&limit=100").json()
-                last_tx_send, last_tx_recv = find_historical_tx(txs, address)
-
-                # go to the last page
-                txs = s.get(f"{API_MAINNET}/addresses/{address}/transactions?page={num_tx}&limit=100").json()
-                txs.reverse()
-                first_tx_send, first_tx_recv = find_historical_tx(txs, address)
-                addressesTxs.append(
-                    {'address': address, 'first_tx_send': first_tx_send, 'last_tx_send': last_tx_send,
-                     'first_tx_recv': first_tx_recv,
-                     'last_tx_recv': last_tx_recv})
-                db.insertTxHistory(addressesTxs)
-                time.sleep(2 / 1000)
-
-
-        except requests.RequestException as e:
-            traceback.print_exc()
-        '''
-
 
 async def getBalances(urls):
     main_logger.info("Get balances")
 
-    WORKER = 100
+    WORKER = 300
     queue = asyncio.Queue(WORKER)
     results = []
 
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
-        workers = [asyncio.create_task(workerBalance(queue, session, results, timeout=30)) for _ in
+    async with aiohttp.ClientSession() as session:
+        workers = [asyncio.create_task(workerBalance(queue, session, results, timeout=10)) for _ in
                    range(WORKER)]
 
         async for url in async_wrap_iter(urls):
             await queue.put(url)
 
+        main_logger.info("done")
+
         # Wait for all enqueued items to be processed.
         await queue.join()
+        #await asyncio.gather(*workers)
+        #
+        main_logger.info("done")
         # The workers are now idly waiting for the next queue item and we
         # no longer need them.
-    for runningWorker in workers:
-        runningWorker.cancel()
+        for runningWorker in workers:
+            runningWorker.cancel()
 
     return results
 
 
 async def fetchBalance(session, url, timeout=30):
-    async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
-        try:
-            data = await resp.json()
+    response = await session.get(url, allow_redirects=True, timeout=timeout)
+
+    try:
+        if response.ok:
+            data = await response.json()
 
             addr = url.split('/')[4]
-
             return {addr: data}
 
-        except (requests.RequestException, asyncio.TimeoutError) as e:
+        else:
             return None
+
+    except (requests.RequestException, asyncio.TimeoutError) as e:
+        return None
 
 
 async def workerBalance(queue, session, results, timeout=30):
     while True:
         url = await queue.get()
-        results.append(await fetchBalance(session, url, timeout=timeout))
-        # Mark the item as processed, allowing queue.join() to keep
-        # track of remaining work and know when everything is done.
-        queue.task_done()
+        try:
+            results.append(await fetchBalance(session, url, timeout=timeout))
+        except asyncio.CancelledError as err:
+            pass
+        finally:
+            # Mark the item as processed, allowing queue.join() to keep
+            # track of remaining work and know when everything is done.
+            queue.task_done()
+
 
 
 async def get_all_balances():
     # use session to speedup requests
 
-    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=30))
+    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=120))
     addressBalances = list()
     main_logger.info(f'Start balances update. Number to update: {len(allAddresses)}')
 
@@ -525,8 +510,8 @@ async def get_all_balances():
         urls.append(f"{API_MAINNET}/addresses/{address}/balance")
 
     allBalances = await getBalances(urls)
+    print(len(allBalances))
     count = 0
-    print("done")
     for data in allBalances:
         if type(data) == dict:
             for address, balanceData in data.items():
@@ -561,7 +546,7 @@ def updateStats():
         db.insertManyAddress(addressToBalance.keys())
         get_known_addresses()
         asyncio.run(get_all_balances())
-        asyncio.run(get_tx_history())
+        #asyncio.run(get_tx_history())
     except Exception as e:
         main_logger.exception(e)
 
