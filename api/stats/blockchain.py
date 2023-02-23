@@ -347,7 +347,7 @@ async def fetch(session, url, timeout=30, reverse=False):
 
 async def worker(queue, session, results, timeout=30, reverse=False):
     while True:
-          url = await queue.get()
+        url = await queue.get()
         try:
             results.append(await fetch(session, url, timeout=timeout, reverse=reverse))
         except asyncio.CancelledError as err:
