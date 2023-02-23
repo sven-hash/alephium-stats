@@ -378,7 +378,10 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
             await queue.put(batch)
 
         # Wait for all enqueued items to be processed.
+        main_logger.info("done")
         await queue.join()
+        main_logger.info("done")
+
         # The workers are now idly waiting for the next queue item and we
         # no longer need them.
     for runningWorker in workers:
