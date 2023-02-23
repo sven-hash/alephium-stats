@@ -347,11 +347,15 @@ async def fetch(session, url, timeout=30, reverse=False):
 
 async def worker(queue, session, results, timeout=30, reverse=False):
     while True:
-        url = await queue.get()
-        results.append(await fetch(session, url, timeout=timeout, reverse=reverse))
-        # Mark the item as processed, allowing queue.join() to keep
-        # track of remaining work and know when everything is done.
-        queue.task_done()
+          url = await queue.get()
+        try:
+            results.append(await fetch(session, url, timeout=timeout, reverse=reverse))
+        except asyncio.CancelledError as err:
+            pass
+        finally:
+            # Mark the item as processed, allowing queue.join() to keep
+            # track of remaining work and know when everything is done.
+            queue.task_done()
 
 
 async def get_last_txs(addressesList, urls=None, reverse=False):
