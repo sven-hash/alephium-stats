@@ -506,7 +506,7 @@ async def workerBalance(queue, session, results, timeout=30):
 async def get_all_balances():
     # use session to speedup requests
 
-    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=120))
+    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=30))
     addressBalances = list()
     main_logger.info(f'Start balances update. Number to update: {len(allAddresses)}')
 
