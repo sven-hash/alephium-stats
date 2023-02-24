@@ -240,7 +240,6 @@ class BaseModel(Model):
                                                           TxHistory.last_tx_send,TxHistory.last_tx_recv).
             join(Name, join_type=JOIN.LEFT_OUTER).switch(Address).join(TxHistory).limit(limit)
             .order_by(Address.balance.desc()).dicts()]
-            print(data)
 
         elif page is not None:
 

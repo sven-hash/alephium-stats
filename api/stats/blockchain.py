@@ -517,7 +517,6 @@ async def get_all_balances():
         urls.append(f"{API_MAINNET}/addresses/{address}/balance")
 
     allBalances = await getBalances(urls)
-    print(len(allBalances))
     count = 0
     for data in allBalances:
         if type(data) == dict:
