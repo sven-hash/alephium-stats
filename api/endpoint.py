@@ -61,6 +61,8 @@ class AddressesStats(Resource):
         topAddresses = request.args.get('top', type=int, default=0)
         page = request.args.get('page', type=int, default=None)
         size = request.args.get('size', type=int, default=10)
+        includeTx = request.args.get('withTx',default=False)
+
         humanFormat = True if request.args.get('human') is not None else False
 
         if page is not None:
@@ -75,7 +77,7 @@ class AddressesStats(Resource):
         return response
 
     @cached(cache={})
-    def read_data(self, topAddresses, hint, page=None, size=None):
+    def read_data(self, topAddresses, hint, page=None, size=None,txHistory=None):
         data = {}
         human = {}
         db = BaseModel()
@@ -134,7 +136,6 @@ class GenesisStats(Resource):
             addr.update({'lockedHint': f"{Utils.humanFormat(addr['locked'] / (10 ** 18))} ALPH"})
 
         return data
-
 
 class TxHistoryStats(Resource):
     def get(self,address=None):
