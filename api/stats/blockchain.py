@@ -249,6 +249,7 @@ def scrape_new_addresses(start_point):
 def get_addresses():
     # If we're supposed to save the known addresses, check if there is already a saved file and load it
     start_point = db.getTimeLastInsert()
+    print(start_point)
     main_logger.info('Start addresses update')
     if start_point is not None:
         scrape_new_addresses(start_point)

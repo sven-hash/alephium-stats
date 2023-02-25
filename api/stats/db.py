@@ -247,15 +247,14 @@ class BaseModel(Model):
                                                           Address.locked, Name.name, Name.state, Name.exchangeName,
                                                           Name.type,Address.id,TxHistory.first_tx_send,TxHistory.first_tx_recv,
                                                           TxHistory.last_tx_send,TxHistory.last_tx_recv).
-            join(Name, join_type=JOIN.LEFT_OUTER).switch(Address).join(TxHistory).
-                paginate(page, size).dicts())
+            join(Name, join_type=JOIN.LEFT_OUTER).switch(Address).join(TxHistory).paginate(page, size).order_by(Address.balance.desc()).dicts())
 
         else:
             data = [address for address in Address.select(Address.address, Address.updated_on, Address.balance,
                                                           Address.locked, Name.name, Name.state, Name.exchangeName,
                                                           Name.type,Address.id,TxHistory.first_tx_send,TxHistory.first_tx_recv,
                                                           TxHistory.last_tx_send,TxHistory.last_tx_recv).
-            join(Name, join_type=JOIN.LEFT_OUTER).switch(Address).join(TxHistory).dicts()]
+            join(Name, join_type=JOIN.LEFT_OUTER).switch(Address).join(TxHistory).order_by(Address.balance.desc()).dicts()]
 
         self.close()
 
