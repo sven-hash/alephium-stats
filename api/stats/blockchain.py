@@ -385,8 +385,8 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
 
         # The workers are now idly waiting for the next queue item and we
         # no longer need them.
-    for runningWorker in workers:
-        runningWorker.cancel()
+        for runningWorker in workers:
+            runningWorker.cancel()
 
     return results
 
@@ -447,7 +447,7 @@ async def get_tx_history():
 async def getBalances(urls):
     main_logger.info("Get balances")
 
-    WORKER = 300
+    WORKER = 50
     queue = asyncio.Queue(WORKER)
     results = []
 
