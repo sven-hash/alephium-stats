@@ -372,7 +372,7 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
     queue = asyncio.Queue(WORKER)
     results = []
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
-        workers = [asyncio.create_task(worker(queue, session, results, timeout=30, reverse=reverse)) for _ in
+        workers = [asyncio.create_task(worker(queue, session, results, timeout=10, reverse=reverse)) for _ in
                    range(WORKER)]
 
         async for batch in async_wrap_iter(addrTxUrl):
