@@ -17,7 +17,9 @@ if __name__ == '__main__':
     #asyncio.run(get_tx_history())
 
     for i in range(3):
+        asyncio.run(get_tx_history())
         asyncio.run(get_all_balances())
+
         i+=1
 
     """

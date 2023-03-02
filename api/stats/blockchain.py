@@ -33,7 +33,7 @@ FULLNODE_ENDPOINT = os.getenv('FULLNODE_ENDPOINT', "node-alephium.ono.re")
 # Base path of an Alephium full node
 API_BASE = f"http://{FULLNODE_ENDPOINT}"
 API_MAINNET = "https://backend.mainnet.alephium.org"
-# API_MAINNET = "https://alephium-backend.ono.re"
+#API_MAINNET = "https://alephium-backend.ono.re"
 
 # Speeds up the initial address dump phase
 SAVE_KNOWN_ADDRESSES = True
@@ -319,30 +319,31 @@ def find_historical_tx(txs, address):
 def get_number_page(s, address, limit):
     try:
         num_tx = s.get(f"{API_MAINNET}/addresses/{address}/total-transactions").json()
-    except requests.RequestException as e:
-        traceback.print_exc()
+
+    except (requests.RequestException, json.JSONDecodeError, requests.JSONDecodeError) as e:
+        #traceback.print_exc()
         return 0
 
     return math.ceil(num_tx / limit)
 
 
 async def fetch(session, url, timeout=30, reverse=False):
-    async with session.get(url, allow_redirects=True, timeout=timeout) as resp:
-        try:
-            data = await resp.json()
-            # time.sleep(2 / 1000)
+    response = await session.get(url, allow_redirects=True, timeout=timeout)
+    try:
 
-            if resp.ok:
-
+            if response.ok:
+                data = await response.json()
                 if reverse:
                     data.reverse()
 
                 addr = url.split('/')[4]
                 return {addr: find_historical_tx(data, addr)}
-
+            elif response.status == 429:
+                await asyncio.sleep(int(response.headers.get("Retry-After")))
+                return None
             else:
                 return None
-        except (requests.RequestException, asyncio.TimeoutError) as e:
+    except (requests.RequestException, asyncio.TimeoutError) as e:
             return None
 
 
@@ -368,7 +369,7 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
         else:
             addrTxUrl = urls
 
-    WORKER = 300
+    WORKER = 10
     queue = asyncio.Queue(WORKER)
     results = []
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
@@ -385,8 +386,8 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
 
         # The workers are now idly waiting for the next queue item and we
         # no longer need them.
-        for runningWorker in workers:
-            runningWorker.cancel()
+    for runningWorker in workers:
+         runningWorker.cancel()
 
     return results
 
@@ -424,7 +425,8 @@ async def get_tx_history():
     for addr in allAddresses:
         address = addr['address']
         page = get_number_page(s, address, 100)
-        urls.append(f"{API_MAINNET}/addresses/{address}/transactions?page={page}&limit=100")
+        if page > 0:
+            urls.append(f"{API_MAINNET}/addresses/{address}/transactions?page={page}&limit=100")
 
     allTxs = await get_last_txs(addressesList=allAddresses, urls=urls, reverse=True)
 
@@ -447,7 +449,7 @@ async def get_tx_history():
 async def getBalances(urls):
     main_logger.info("Get balances")
 
-    WORKER = 50
+    WORKER = 3
     queue = asyncio.Queue(WORKER)
     results = []
 
@@ -462,13 +464,12 @@ async def getBalances(urls):
 
         # Wait for all enqueued items to be processed.
         await queue.join()
-        #await asyncio.gather(*workers)
-        #
         main_logger.info("done")
         # The workers are now idly waiting for the next queue item and we
         # no longer need them.
-        for runningWorker in workers:
-            runningWorker.cancel()
+
+    for runningWorker in workers:
+        runningWorker.cancel()
 
     return results
 
@@ -482,25 +483,30 @@ async def fetchBalance(session, url, timeout=30):
 
             addr = url.split('/')[4]
             return {addr: data}
-
+        elif response.status == 429:
+            await asyncio.sleep(int(response.headers.get("Retry-After")))
+            return None
         else:
+            print(response.text)
             return None
 
     except (requests.RequestException, asyncio.TimeoutError) as e:
+        print(e)
         return None
 
 
 async def workerBalance(queue, session, results, timeout=30):
     while True:
         url = await queue.get()
+
         try:
             results.append(await fetchBalance(session, url, timeout=timeout))
         except asyncio.CancelledError as err:
             pass
         finally:
-            # Mark the item as processed, allowing queue.join() to keep
-            # track of remaining work and know when everything is done.
             queue.task_done()
+
+
 
 
 
