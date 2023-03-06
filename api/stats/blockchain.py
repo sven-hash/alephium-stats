@@ -243,13 +243,12 @@ def scrape_new_addresses(start_point):
     s = requests.Session()
 
     for ts_start in range(start_point, int(time.time()), 60 * 30):  # only supports ranges of 30 minutes or less
-        dump_address_from_TS_range(ts_start, ts_start + 60 * 30, s)
+        dump_address_from_TS_range(ts_start-120, ts_start + 60 * 30, s)
 
 
 def get_addresses():
     # If we're supposed to save the known addresses, check if there is already a saved file and load it
     start_point = db.getTimeLastInsert()
-    print(start_point)
     main_logger.info('Start addresses update')
     if start_point is not None:
         scrape_new_addresses(start_point)
@@ -369,7 +368,7 @@ async def get_last_txs(addressesList, urls=None, reverse=False):
         else:
             addrTxUrl = urls
 
-    WORKER = 10
+    WORKER = 3
     queue = asyncio.Queue(WORKER)
     results = []
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=WORKER)) as session:
@@ -413,7 +412,7 @@ async def get_tx_history():
                      'last_tx_recv': tx[1], 'updated_on': datetime.utcnow()})
         else:
             count += 1
-    main_logger.info(f"tx error: {count}")
+    main_logger.info(f"tx history - tx error: {count}")
     db.insertTxHistory(addressesTxs)
 
     urls = list()
@@ -444,6 +443,7 @@ async def get_tx_history():
     main_logger.info(f"tx error: {count}")
 
     db.insertTxHistory(addressesTxs)
+    main_logger.info(f"tx update done")
 
 
 async def getBalances(urls):
@@ -513,7 +513,7 @@ async def workerBalance(queue, session, results, timeout=30):
 async def get_all_balances():
     # use session to speedup requests
 
-    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=30))
+    allAddresses = db.getAddressByDate(datetime.now() - timedelta(minutes=120))
     addressBalances = list()
     main_logger.info(f'Start balances update. Number to update: {len(allAddresses)}')
 
@@ -550,6 +550,12 @@ def print_top_whales(count=100):
         print(f"{idx}: {k} with {v:.3f} ALPH (locked amount {addressToBalanceLocked[k]} ALPH)")
         idx += 1
 
+async def asyncfunctions():
+    balances = asyncio.create_task(get_all_balances())
+    tx_history = asyncio.create_task(get_tx_history())
+
+    await tx_history
+    await  balances
 
 def updateStats():
     main_logger.info('Start DB update process')
@@ -558,8 +564,7 @@ def updateStats():
         get_addresses()
         db.insertManyAddress(addressToBalance.keys())
         get_known_addresses()
-        asyncio.run(get_all_balances())
-        asyncio.run(get_tx_history())
+        asyncio.run(asyncfunctions())
     except Exception as e:
         main_logger.exception(e)
 

@@ -1,6 +1,14 @@
 from stats.blockchain import *
 from stats.db import *
 
+
+async def asyncfunctions():
+    balances = asyncio.create_task(get_all_balances())
+    tx_history = asyncio.create_task(get_tx_history())
+
+    await tx_history
+    await balances
+
 if __name__ == '__main__':
     log_file_format = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
     main_logger = logging.getLogger('db')
@@ -17,8 +25,7 @@ if __name__ == '__main__':
     #asyncio.run(get_tx_history())
 
     for i in range(3):
-        asyncio.run(get_tx_history())
-        asyncio.run(get_all_balances())
+        asyncio.run(asyncfunctions())
 
         i+=1
 

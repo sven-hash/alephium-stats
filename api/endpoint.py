@@ -8,7 +8,6 @@ import schedule
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
-from cachetools import cached, TTLCache
 
 from cmc.alph import CmcAPI
 from coingecko.alph import CoingeckoAPI
@@ -16,9 +15,19 @@ from gateio.alph import GateIoAPI
 from stats.blockchain import updateStats
 from stats.db import BaseModel, create_tables
 from utils import Utils
+from flask_caching import Cache
+
+config = {
+    "DEBUG": True,          # some Flask specific configs
+    "CACHE_TYPE": "SimpleCache",  # Flask-Caching related configs
+    "CACHE_DEFAULT_TIMEOUT": 300
+}
 
 app = Flask(__name__)
 api = Api(app)
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
+cache.init_app(app,config={'CACHE_TYPE': 'SimpleCache'})
+
 
 BASE_URL = "https://api.gateio.ws/api/v4"
 CMC_BASE_URL = "https://pro-api.coinmarketcap.com/v1"
@@ -30,7 +39,6 @@ load_dotenv()
 
 CMC_API_KEY = os.getenv('CMC_API_KEY')
 
-cache = TTLCache(maxsize=10 ** 9, ttl=120)
 log_file_format = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
 main_logger = logging.getLogger('db')
 main_logger.setLevel(logging.INFO)
@@ -38,6 +46,7 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter(log_file_format))
 main_logger.addHandler(console_handler)
+
 
 
 class TickerPrice(Resource):
@@ -57,11 +66,13 @@ class TickerPrice(Resource):
 
 
 class AddressesStats(Resource):
+
+    @cache.cached()
     def get(self):
         topAddresses = request.args.get('top', type=int, default=0)
         page = request.args.get('page', type=int, default=None)
         size = request.args.get('size', type=int, default=10)
-        includeTx = request.args.get('withTx',default=False)
+        includeTx = request.args.get('withTx', default=False)
 
         humanFormat = True if request.args.get('human') is not None else False
 
@@ -76,12 +87,10 @@ class AddressesStats(Resource):
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
-    @cached(cache={})
-    def read_data(self, topAddresses, hint, page=None, size=None,txHistory=None):
+    def read_data(self, topAddresses, hint, page=None, size=None, txHistory=None):
         data = {}
         human = {}
         db = BaseModel()
-
         totalLocked = db.getTotalLocked()
         totalBalance = db.getTotalBalance()
         data.update({
@@ -109,6 +118,7 @@ class AddressesStats(Resource):
 
 
 class GenesisStats(Resource):
+    @cache.cached()
     def get(self):
 
         data = self.read_data()
@@ -116,7 +126,6 @@ class GenesisStats(Resource):
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
-    @cached(cache={})
     def read_data(self):
 
         startDate = MAINNET_START
@@ -137,8 +146,10 @@ class GenesisStats(Resource):
 
         return data
 
+
 class TxHistoryStats(Resource):
-    def get(self,address=None):
+    @cache.cached()
+    def get(self, address=None):
         page = request.args.get('page', type=int, default=None)
         size = request.args.get('size', type=int, default=10)
         data = self.read_data(page, size, address)
@@ -146,21 +157,20 @@ class TxHistoryStats(Resource):
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
-    @cached(cache={})
-    def read_data(self,page, size, address=None):
+    def read_data(self, page, size, address=None):
         db = BaseModel()
 
         return db.getTxAddress(page, size, address)
 
 
 class PeersStats(Resource):
+    @cache.cached()
     def get(self):
         data = self.read_data()
         response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
-    @cached(cache={})
     def read_data(self):
         db = BaseModel()
 
@@ -168,13 +178,13 @@ class PeersStats(Resource):
 
 
 class Name(Resource):
+    @cache.cached()
     def get(self):
         data = self.read_data()
         response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
-    @cached(cache={})
     def read_data(self):
         db = BaseModel()
 
@@ -198,7 +208,7 @@ api.add_resource(AddressesStats, '/api/stats/addresses')
 api.add_resource(GenesisStats, '/api/stats/genesis')
 # api.add_resource(PeersStats, '/api/stats/peers')
 api.add_resource(Name, '/api/known-wallets/')
-api.add_resource(TxHistoryStats, '/api/stats/tx-history','/api/stats/tx-history/<string:address>')
+api.add_resource(TxHistoryStats, '/api/stats/tx-history', '/api/stats/tx-history/<string:address>')
 
 if __name__ == '__main__':
     host = '0.0.0.0'
