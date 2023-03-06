@@ -1,5 +1,6 @@
 from stats.blockchain import *
 from stats.db import *
+from stats.backendDb import *
 
 
 async def asyncfunctions():
@@ -24,10 +25,8 @@ if __name__ == '__main__':
     #db.getTxAddressWithFirst()
     #asyncio.run(get_tx_history())
 
-    for i in range(3):
-        asyncio.run(asyncfunctions())
-
-        i+=1
+    backDb = BackendDB()
+    print(backDb.getBurnedAlph())
 
     """
     get_addresses()

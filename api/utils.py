@@ -4,6 +4,13 @@ import requests
 from urllib3 import Retry
 from requests.adapters import HTTPAdapter
 
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+DB_BACKEND_USER=os.getenv("DB_BACKEND_USER")
+DB_BACKEND_PASSWORD=os.getenv("DB_BACKEND_PASSWORD")
+DB_BACKEND_HOST=os.getenv("DB_BACKEND_HOST")
 
 class Utils:
 

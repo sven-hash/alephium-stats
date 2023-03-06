@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 
+from stats.backendDb import BackendDB
 from cmc.alph import CmcAPI
 from coingecko.alph import CoingeckoAPI
 from gateio.alph import GateIoAPI
@@ -163,6 +164,18 @@ class TxHistoryStats(Resource):
 
         return db.getTxAddress(page, size, address)
 
+class BurnedToken(Resource):
+    @cache.cached()
+    def get(self):
+        data = self.read_data()
+        response = jsonify({"burnALPHcurrentHour": data})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
+
+    def read_data(self):
+        db = BackendDB()
+
+        return db.getBurnedAlph()
 
 class PeersStats(Resource):
     @cache.cached()
@@ -210,6 +223,7 @@ api.add_resource(GenesisStats, '/api/stats/genesis')
 # api.add_resource(PeersStats, '/api/stats/peers')
 api.add_resource(Name, '/api/known-wallets/')
 api.add_resource(TxHistoryStats, '/api/stats/tx-history', '/api/stats/tx-history/<string:address>')
+api.add_resource(BurnedToken, '/api/stats/burned')
 
 if __name__ == '__main__':
     host = '0.0.0.0'

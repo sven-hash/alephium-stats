@@ -18,6 +18,7 @@ schedule = "*"
 cachetools = "*"
 grequests = "*"
 aiostream = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
