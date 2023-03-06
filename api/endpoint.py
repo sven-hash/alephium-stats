@@ -67,7 +67,7 @@ class TickerPrice(Resource):
 
 class AddressesStats(Resource):
 
-    @cache.cached()
+
     def get(self):
         topAddresses = request.args.get('top', type=int, default=0)
         page = request.args.get('page', type=int, default=None)
@@ -86,6 +86,7 @@ class AddressesStats(Resource):
         response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
+
 
     def read_data(self, topAddresses, hint, page=None, size=None, txHistory=None):
         data = {}
@@ -178,7 +179,7 @@ class PeersStats(Resource):
 
 
 class Name(Resource):
-    @cache.cached()
+
     def get(self):
         data = self.read_data()
         response = jsonify(data)
