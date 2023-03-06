@@ -11,6 +11,11 @@ services:
       - traefik.http.routers.api_ticker.tls.certresolver=letsEncrypt
       - traefik.enable=true
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 2000M
     networks:
       - traefik-proxy
     ports:
