@@ -165,7 +165,7 @@ class TxHistoryStats(Resource):
         return db.getTxAddress(page, size, address)
 
 class BurnedToken(Resource):
-    @cache.cached()
+
     def get(self):
         data = self.read_data()
         response = jsonify({"burnALPHcurrentHour": data})
