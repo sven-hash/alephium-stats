@@ -17,6 +17,10 @@ matplotlib = "*"
 cachetools = "*"
 flask-peewee = "*"
 gunicorn = "*"
+psycopg2-binary = "*"
+Flask-Caching="*"
+
+
 
 [dev-packages]
 

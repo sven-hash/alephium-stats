@@ -19,6 +19,8 @@ cachetools = "*"
 grequests = "*"
 aiostream = "*"
 psycopg2-binary = "*"
+flask-peewee = "*"
+Flask-Caching="*"
 
 [dev-packages]
 
