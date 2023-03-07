@@ -551,11 +551,11 @@ def print_top_whales(count=100):
         idx += 1
 
 async def asyncfunctions():
-    balances = asyncio.create_task(get_all_balances())
-    tx_history = asyncio.create_task(get_tx_history())
-
-    await tx_history
-    await  balances
+    #balances = asyncio.create_task()
+    #tx_history = asyncio.create_task()
+    await asyncio.gather(get_all_balances(),get_tx_history())
+    #await tx_history
+    #await  balances
 
 def updateStats():
     main_logger.info('Start DB update process')
