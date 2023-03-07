@@ -166,6 +166,9 @@ class TxHistoryStats(Resource):
 
 class BurnedToken(Resource):
 
+    def __init__(self):
+        self.db = BackendDB()
+
     def get(self):
         data = self.read_data()
         response = jsonify(data)
@@ -173,13 +176,13 @@ class BurnedToken(Resource):
         return response
 
     def read_data(self):
-        db = BackendDB()
+        self.db.connect()
         runningHour=(datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
         runningDay=(datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
         
-        hour=db.getBurnedAlph(runningHour)
-        day=db.getBurnedAlph(runningDay)
-        db.close()
+        hour=self.db.getBurnedAlph(runningHour)
+        day=self.db.getBurnedAlph(runningDay)
+        self.db.close()
         return {"burnALPHcurrentHour": hour,"burnALPHcurrentDay": day}
 
 class PeersStats(Resource):

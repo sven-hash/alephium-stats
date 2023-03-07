@@ -414,6 +414,12 @@ async def get_tx_history():
             count += 1
     main_logger.info(f"tx history - tx error: {count}")
     db.insertTxHistory(addressesTxs)
+    main_logger.info(f"tx first update done")
+
+
+
+async def get_last_tx_history():
+    s = requests.Session()
 
     urls = list()
     addressesTxs = list()
@@ -443,7 +449,7 @@ async def get_tx_history():
     main_logger.info(f"tx error: {count}")
 
     db.insertTxHistory(addressesTxs)
-    main_logger.info(f"tx update done")
+    main_logger.info(f"tx last update done")
 
 
 async def getBalances(urls):
@@ -553,7 +559,7 @@ def print_top_whales(count=100):
 async def asyncfunctions():
     #balances = asyncio.create_task()
     #tx_history = asyncio.create_task()
-    await asyncio.gather(get_all_balances(),get_tx_history())
+    await asyncio.gather(get_all_balances(),get_tx_history(),get_last_tx_history())
     #await tx_history
     #await  balances
 

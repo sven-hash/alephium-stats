@@ -8,16 +8,20 @@ from utils import DB_BACKEND_HOST,DB_BACKEND_PASSWORD,DB_BACKEND_USER
 class BackendDB:
 
     def __init__(self):
+        self.cur = None
+        self.conn = None
+
+    def connect(self):
         try:
             self.conn = psycopg2.connect(database="explorer",
-                                    host=DB_BACKEND_HOST,
-                                    user=DB_BACKEND_USER,
-                                    password=DB_BACKEND_PASSWORD,
-                                    port="5432")
+                                         host=DB_BACKEND_HOST,
+                                         user=DB_BACKEND_USER,
+                                         password=DB_BACKEND_PASSWORD,
+                                         port="5432")
             self.cur = self.conn.cursor()
         except:
             print("Database not connected successfully")
-
+            return None
     def getMinedAlph(self):
         pass
 
