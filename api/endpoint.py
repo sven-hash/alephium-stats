@@ -180,7 +180,7 @@ class BurnedToken(Resource):
         hour=db.getBurnedAlph(runningHour)
         day=db.getBurnedAlph(runningDay)
         
-        return {"burnALPHcurrentHour": hour,burnALPHcurrentHour,"burnALPHcurrentDay": day}
+        return {"burnALPHcurrentHour": hour,"burnALPHcurrentDay": day}
 
 class PeersStats(Resource):
     @cache.cached()
