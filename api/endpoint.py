@@ -179,7 +179,7 @@ class BurnedToken(Resource):
         
         hour=db.getBurnedAlph(runningHour)
         day=db.getBurnedAlph(runningDay)
-        
+        db.close()
         return {"burnALPHcurrentHour": hour,"burnALPHcurrentDay": day}
 
 class PeersStats(Resource):
