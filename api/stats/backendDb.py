@@ -9,12 +9,12 @@ class BackendDB:
 
     def __init__(self):
         try:
-            conn = psycopg2.connect(database="explorer",
+            self.conn = psycopg2.connect(database="explorer",
                                     host=DB_BACKEND_HOST,
                                     user=DB_BACKEND_USER,
                                     password=DB_BACKEND_PASSWORD,
                                     port="5432")
-            self.cur = conn.cursor()
+            self.cur = self.conn.cursor()
         except:
             print("Database not connected successfully")
 
@@ -30,4 +30,6 @@ class BackendDB:
 
         self.cur.execute(query)
         rec = self.cur.fetchone()
+        self.conn.close()
+
         return rec[0]
