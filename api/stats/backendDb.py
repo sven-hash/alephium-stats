@@ -38,6 +38,6 @@ class BackendDB:
     def close(self):
         try:
             self.conn.close()
-         except:
+        except:
             print("db close error")
         
