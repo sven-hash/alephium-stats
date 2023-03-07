@@ -174,8 +174,8 @@ class BurnedToken(Resource):
 
     def read_data(self):
         db = BackendDB()
-        runningHour=(datetime.datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
-        runningDay=(datetime.datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
+        runningHour=(datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
+        runningDay=(datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
         
         hour=db.getBurnedAlph(runningHour)
         day=db.getBurnedAlph(runningDay)
