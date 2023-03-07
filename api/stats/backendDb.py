@@ -30,6 +30,14 @@ class BackendDB:
 
         self.cur.execute(query)
         rec = self.cur.fetchone()
-        self.conn.close()
+        
 
         return rec[0]
+    
+    
+    def close(self):
+        try:
+            self.conn.close()
+         except:
+            print("db close error")
+        
