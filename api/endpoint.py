@@ -168,14 +168,19 @@ class BurnedToken(Resource):
 
     def get(self):
         data = self.read_data()
-        response = jsonify({"burnALPHcurrentHour": data})
+        response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     def read_data(self):
         db = BackendDB()
-
-        return db.getBurnedAlph()
+        runningHour=(datetime.datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
+        runningDay=(datetime.datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
+        
+        hour=db.getBurnedAlph(runningHour)
+        day=db.getBurnedAlph(runningDay)
+        
+        return {"burnALPHcurrentHour": hour,burnALPHcurrentHour,"burnALPHcurrentDay": day}
 
 class PeersStats(Resource):
     @cache.cached()
