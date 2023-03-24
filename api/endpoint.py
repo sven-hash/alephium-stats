@@ -1,5 +1,7 @@
 import logging
 import os
+import signal
+import sys
 import threading
 import time
 from datetime import datetime, date, timedelta
@@ -171,19 +173,26 @@ class BurnedToken(Resource):
 
     def get(self):
         data = self.read_data()
-        response = jsonify(data)
+
+        if date is None:
+            response = {"error":f"{data}"}
+        else:
+            response = jsonify(data)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     def read_data(self):
-        self.db.connect()
-        runningHour=(datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
-        runningDay=(datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
-        
-        hour=self.db.getBurnedAlph(runningHour)
-        day=self.db.getBurnedAlph(runningDay)
-        self.db.close()
-        return {"burnALPHcurrentHour": hour,"burnALPHcurrentDay": day}
+        try:
+            self.db.connect()
+            runningHour=(datetime.utcnow().replace(minute=0,second=0,microsecond=0)).timestamp()*1000
+            runningDay=(datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)).timestamp()*1000
+
+            hour=self.db.getBurnedAlph(runningHour)
+            day=self.db.getBurnedAlph(runningDay)
+            self.db.close()
+            return {"burnALPHcurrentHour": hour,"burnALPHcurrentDay": day}
+        except:
+            return None
 
 class PeersStats(Resource):
     @cache.cached()
@@ -218,11 +227,15 @@ def update():
     main_logger.info('Start DB update thread')
     schedule.every().minutes.do(updateStats)
     while True:
-        schedule.run_pending()
-        time.sleep(60)
+        try:
+            schedule.run_pending()
+            time.sleep(60)
+        except:
+            sys.exit()
 
 
-th = threading.Thread(target=update)
+
+th = threading.Thread(target=update,daemon=True)
 th.start()
 
 api.add_resource(TickerPrice, '/api/ticker')

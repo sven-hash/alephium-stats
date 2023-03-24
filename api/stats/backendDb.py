@@ -31,12 +31,12 @@ class BackendDB:
         query = f"select sum((gas_amount*gas_price)/10^18)/2 from transactions where main_chain = true"\
                 f" and block_timestamp BETWEEN {timeFrom} and {now.timestamp()*1000}"
 
-
-        self.cur.execute(query)
-        rec = self.cur.fetchone()
-        
-
-        return rec[0]
+        try:
+            self.cur.execute(query)
+            rec = self.cur.fetchone()
+            return rec[0]
+        except:
+            return None
     
     
     def close(self):
