@@ -28,7 +28,7 @@ class BackendDB:
     def getBurnedAlph(self, timeFrom):
         now = datetime.datetime.utcnow()
 
-        query = f"select sum((gas_amount*gas_price)/10^18)/2 from transactions where main_chain = true"\
+        query = f"select sum((gas_amount*gas_price)/10^18) from transactions where main_chain = true"\
                 f" and block_timestamp BETWEEN {timeFrom} and {now.timestamp()*1000}"
 
         try:
